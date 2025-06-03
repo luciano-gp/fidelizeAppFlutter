@@ -18,6 +18,7 @@ class _NearbyStoresMapState extends State<NearbyStoresMap> {
     {'name': 'Joias da Ana', 'lat': -29.465, 'lng': -51.960},
     {'name': 'Studio Elegance', 'lat': -29.462, 'lng': -51.966},
     {'name': 'Cristal Luxo', 'lat': -29.470, 'lng': -51.957},
+    {'name': 'Cristal Luxo', 'lat': -29.470, 'lng': -51.957},
   ];
 
   @override
