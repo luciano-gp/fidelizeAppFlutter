@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fidelize_app/models/logged_user.dart';
+import 'package:fidelize_app/models/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'features/auth/login_screen.dart';
@@ -17,18 +20,36 @@ class FidelizeApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, authSnapshot) {
+          if (authSnapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          if (snapshot.hasData) {
-            return const HomeScreen();
+          final user = authSnapshot.data;
+          if (user == null) {
+            return const LoginScreen();
           }
 
-          return const LoginScreen();
+          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final data = userSnapshot.data?.data();
+              if (data != null) {
+                final userModel = UserModel.fromMap(user.uid, data);
+                LoggedUser.setUser(userModel);
+              }
+
+              return const HomeScreen();
+            },
+          );
         },
       ),
     );

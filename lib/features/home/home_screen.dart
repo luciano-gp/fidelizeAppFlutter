@@ -1,3 +1,8 @@
+import 'package:fidelize_app/features/products/products_screen.dart';
+import 'package:fidelize_app/features/transactions/history_screen.dart';
+import 'package:fidelize_app/features/transactions/earn_points_screen.dart';
+import 'package:fidelize_app/models/logged_user.dart';
+import 'package:fidelize_app/widgets/product_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../stores/nearby_stores_screen.dart';
@@ -8,7 +13,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = LoggedUser.user;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Fidelize')),
@@ -29,6 +34,39 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.shopping_bag),
+              title: const Text('Produtos'),
+              onTap: () {
+                Navigator.pop(context); // fecha o menu
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Histórico'),
+              onTap: () {
+                Navigator.pop(context); // fecha o menu
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.card_giftcard),
+              title: const Text('Acumular Pontos'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EarnPointsScreen()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.store),
@@ -65,10 +103,10 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       body: Center(
-        child: Text(
-          'Bem-vindo, ${user?.email ?? "usuário"}!',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
+          child: Text(
+            'Bem-vindo, ${user?.name ?? "usuário"}!',
+            style: Theme.of(context).textTheme.headlineSmall,
+          )
       ),
     );
   }

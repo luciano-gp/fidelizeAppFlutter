@@ -58,7 +58,7 @@ class _NearbyStoresScreenState extends State<NearbyStoresScreen> {
 
       setState(() {
         userPosition = pos;
-        closestStores = sortedStores.take(3).toList();
+        closestStores = sortedStores.take(5).toList();
       });
     } catch (e) {
       _setError('Erro ao obter localização: $e');

@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
-      // TODO: Redirecionar para a tela inicial
     } on FirebaseAuthException catch (e) {
       final message = e.message ?? 'Erro desconhecido';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -66,9 +65,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: loading ? null : _login,
+                        onPressed: () {
+                          if (loading) return;
+                          _login();
+                        },
                         child: loading
-                            ? const CircularProgressIndicator()
+                          ? const CircularProgressIndicator()
                             : const Text('Entrar'),
                       ),
                     ),
