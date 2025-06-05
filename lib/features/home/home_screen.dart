@@ -3,6 +3,7 @@ import 'package:fidelize_app/features/products/products_screen.dart';
 import 'package:fidelize_app/features/transactions/history_screen.dart';
 import 'package:fidelize_app/features/transactions/earn_points_screen.dart';
 import 'package:fidelize_app/models/logged_user.dart';
+import 'package:fidelize_app/models/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -18,17 +19,57 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<DocumentSnapshot> _userFuture;
+  List<QueryDocumentSnapshot> _transactionDocs = [];
+
+  final palette = [
+    Colors.blue,
+    Colors.green,
+    Colors.red,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.amber,
+    Colors.indigo,
+  ];
 
   @override
   void initState() {
     super.initState();
-    _userFuture = FirebaseFirestore.instance.collection('users').doc(LoggedUser.user?.uid).get();
+    _fetchUser();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _userFuture = FirebaseFirestore.instance.collection('users').doc(LoggedUser.user?.uid).get();
+    _fetchUser();
+  }
+
+  Future<void> _refresh() async {
+
+    if (LoggedUser.user?.isAdmin == true) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('transactions')
+          .orderBy('date', descending: true)
+          .limit(5)
+          .get();
+      _transactionDocs = snapshot.docs;
+    }
+
+    setState(() {});
+  }
+
+  void _fetchUser() async {
+    final uid = LoggedUser.user?.uid;
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final data = doc.data();
+      if (data != null) {
+        setState(() {
+          LoggedUser.setUser(UserModel.fromMap(uid, data));
+          _userFuture = Future.value(doc);
+        });
+      }
+    }
   }
 
   Future<Map<String, dynamic>> _getUserAndProductNames(List<QueryDocumentSnapshot> docs) async {
@@ -71,41 +112,56 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.shopping_bag),
               title: const Text('Produtos'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsScreen()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsScreen()));
+                setState(() {
+                  _fetchUser();
+                });
               },
             ),
             ListTile(
               leading: const Icon(Icons.history),
               title: const Text('Histórico'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+                setState(() {
+                  _fetchUser();
+                });
               },
             ),
             ListTile(
               leading: const Icon(Icons.card_giftcard),
               title: const Text('Acumular Pontos'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const EarnPointsScreen()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const EarnPointsScreen()));
+                setState(() {
+                  _fetchUser();
+                });
               },
             ),
             ListTile(
               leading: const Icon(Icons.store),
               title: const Text('Lojas Próximas'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyStoresScreen()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyStoresScreen()));
+                setState(() {
+                  _fetchUser();
+                });
               },
             ),
             ListTile(
               leading: const Icon(Icons.map),
               title: const Text('Mapa de Lojas'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyStoresMap()));
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyStoresMap()));
+                setState(() {
+                  _fetchUser();
+                });
               },
             ),
             const Divider(),
@@ -120,25 +176,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: user?.isAdmin == false
+      floatingActionButton: user?.isAdmin == true
           ? FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const EarnPointsScreen()));
+        onPressed: _refresh,
+        child: const Icon(Icons.refresh),
+      )
+          : FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EarnPointsScreen()),
+          );
+          await _refresh();
         },
         child: const Icon(Icons.qr_code),
-      )
-          : null,
+      ),
       body: FutureBuilder<DocumentSnapshot>(
         future: _userFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          final userData = snapshot.data!.data() as Map<String, dynamic>;
-          final userPoints = userData['points'] ?? 0;
+          final user = LoggedUser.user;
+          final userPoints = user?.points ?? 0;
 
           if (user?.isAdmin == true) {
             return FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance.collection('transactions').get(),
+              future: FirebaseFirestore.instance
+                  .collection('transactions')
+                  .orderBy('date', descending: true)
+                  .limit(5)
+                  .get(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
@@ -164,6 +231,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     final sortedEntries = totals.entries.toList()
                       ..sort((a, b) => b.value.compareTo(a.value));
 
+                    final colors = List.generate(
+                      sortedEntries.length,
+                          (i) => palette[i % palette.length],
+                    );
+
                     return Padding(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
@@ -173,19 +245,23 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 16),
                           Text('Produtos mais resgatados', style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 12),
+
                           Expanded(
                             child: PieChart(
                               PieChartData(
-                                sections: sortedEntries.map((entry) {
+                                sections: List.generate(sortedEntries.length, (i) {
+                                  final entry = sortedEntries[i];
                                   return PieChartSectionData(
                                     title: entry.key,
                                     value: entry.value.toDouble(),
                                     radius: 60,
+                                    color: colors[i],
                                   );
-                                }).toList(),
+                                }),
                               ),
                             ),
                           ),
+
                           const SizedBox(height: 16),
                           Text('Últimas transações', style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 8),
